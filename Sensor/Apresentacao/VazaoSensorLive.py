@@ -8,17 +8,17 @@ from collections import deque
 # 1. CONFIGURAÇÕES INICIAIS
 # ==========================================
 vazao_nominal_m3h = 2000.0
-vazao_nominal_m3s = vazao_nominal_m3h / 3600.0  # Aproximadamente 0.555 m³/s
+vazao_nominal_m3s = vazao_nominal_m3h / 3600.0
 
 volume_acumulado = 0.0
 tempo_segundos = 0
 
-# Janela para média móvel (filtro de tratamento)
+# Média móvel usará janela de 5 segundos para suavizar leituras brutas
 JANELA_FILTRO = 5
 janela_movel = deque(maxlen=JANELA_FILTRO)
 
 # ==========================================
-# 2. MEMÓRIA PARA OS GRÁFICOS (LISTAS)
+# 2. MEMÓRIA PARA OS GRÁFICOS
 # ==========================================
 historico_tempo = []
 historico_vazao_bruta = []
@@ -36,24 +36,24 @@ try:
         # ==========================================
         # 3. GERANDO O DADO SUJO
         # ==========================================
-        # Ruído da bomba (senoides rápidas e fracas)
+        # Ruído da bomba
         pulsacao = 0.005 * math.sin(2 * math.pi * 0.5 * tempo_segundos) + \
                    0.002 * math.sin(2 * math.pi * 1.2 * tempo_segundos)
 
-        # Ruído eletrônico (chiado aleatório)
+        # Ruído eletrônico
         ruido = np.random.normal(0, 0.001)
 
         # Leitura bruta do sensor neste exato segundo
         vazao_bruta_atual = vazao_nominal_m3s + pulsacao + ruido
 
         # ==========================================
-        # 4. TRATAMENTO — Média Móvel (filtro digital simples)
+        # 4. TRATAMENTO — Média Móvel
         # ==========================================
         janela_movel.append(vazao_bruta_atual)
         vazao_tratada = sum(janela_movel) / len(janela_movel)
 
         # ==========================================
-        # 5. INTEGRAÇÃO — Volume Acumulado (usando valor bruto)
+        # 5. INTEGRAÇÃO — Volume Acumulado
         # ==========================================
         volume_acumulado += vazao_bruta_atual  # Δt = 1s
 

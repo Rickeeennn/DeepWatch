@@ -9,11 +9,11 @@ from scipy.signal import butter, lfilter, lfilter_zi
 # ==========================================
 area_tanque = 700.0 # m²
 vazao_nominal_m3s = 2000.0 / 3600.0
-taxa_subida_por_segundo = vazao_nominal_m3s / area_tanque # Metros por segundo
+taxa_subida_por_segundo = vazao_nominal_m3s / area_tanque
 nivel_inicial = 15.0 # Metros
 
 # ==========================================
-# 2. CONFIGURAÇÃO DO FILTRO PASSA-BAIXA (STATEFUL)
+# 2. CONFIGURAÇÃO DO FILTRO PASSA-BAIXA
 # ==========================================
 ordem = 4
 frequencia_corte = 0.01 # Hz
@@ -23,7 +23,7 @@ zi = lfilter_zi(b, a)
 estado_filtro = zi * nivel_inicial
 
 # ==========================================
-# 3. MEMÓRIA PARA O GRÁFICO (LISTAS)
+# 3. MEMÓRIA PARA O GRÁFICO
 # ==========================================
 historico_tempo = []
 historico_bruto = []
@@ -33,8 +33,8 @@ historico_real =[]
 tempo_segundos = 0
 
 print("==================================================")
-print(" SIMULADOR DE NÍVEL (SLOSHING + FILTRO) TEMPO REAL")
-print(" Pressione Ctrl+C para parar e GERAR O GRÁFICO")
+print(" SIMULADOR DE NÍVEL EM TEMPO REAL")
+print(" Pressionar Ctrl+C para parar e gerar gráfico")
 print("==================================================\n")
 
 try:
@@ -49,7 +49,7 @@ try:
        
         nivel_bruto_atual = nivel_real + sloshing + ruido
        
-        # O MILAGRE DA COMPUTAÇÃO (Filtro lfilter)
+        # FILTRO PASSA-BAIXA EM TEMPO REAL
         resultado_filtro, novo_estado = lfilter(b, a, [nivel_bruto_atual], zi=estado_filtro)
         estado_filtro = novo_estado
         nivel_limpo_atual = resultado_filtro[0]
@@ -64,7 +64,7 @@ try:
         print(f"Tempo {tempo_segundos:03d}s | Bruto (Ondas): {nivel_bruto_atual:06.2f}m | Limpo (Filtro): {nivel_limpo_atual:06.2f}m | Real Teórico: {nivel_real:06.2f}m")
        
         tempo_segundos += 1
-        time.sleep(1) # Espera 1 segundo real
+        time.sleep(1)
 
 except KeyboardInterrupt:
     # ==========================================
@@ -75,13 +75,13 @@ except KeyboardInterrupt:
    
     plt.figure(figsize=(12, 6))
    
-    # Linha dos dados sujos (fundo cinza para não atrapalhar a visão)
+    # Linha dos dados sujos
     plt.plot(historico_tempo, historico_bruto, color='lightgray', label='Sensor Bruto (Ondas + Ruído)', alpha=0.8)
    
-    # Linha dos dados limpos pelo seu algoritmo
+    # Linha dos dados limpos pelo algoritmo
     plt.plot(historico_tempo, historico_limpo, color='blue', linewidth=2.5, label='Sinal Tratado (Filtro em Tempo Real)')
    
-    # Linha de onde a água realmente estava (o gabarito)
+    # Linha de nível real
     plt.plot(historico_tempo, historico_real, color='red', linestyle='--', linewidth=2, label='Nível Real Perfeito')
    
     plt.title('Eficácia do Filtro Passa-Baixa em Tempo Real (Sloshing)', fontsize=14, fontweight='bold')
