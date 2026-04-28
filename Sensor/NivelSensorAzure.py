@@ -46,8 +46,9 @@ try:
         # ==========================================
         # SLOSHING (PROPORCIONAL AO NÍVEL)
         # ==========================================
-        # Amplitude sloshing aumenta com o nível
-        amplitude_sloshing = nivel_real * 0.12
+        percentual_enchimento = (nivel_real / nivel_maximo_tanque) * 100
+        
+        amplitude_sloshing = 2.5 * math.exp(-((percentual_enchimento - 60) ** 2) / (2 * 10 ** 2))
         
         # Modo fundamental de ressonância (~0.12 Hz para tanque padrão)
         sloshing_fundamental = amplitude_sloshing * math.sin(2 * math.pi * 0.12 * tempo_segundos)
@@ -86,8 +87,8 @@ try:
         # client.send_message(message)
 
         tempo_segundos += 1
-        time.sleep(0.1)
+        time.sleep(1)
 
 except KeyboardInterrupt:
-    print("\n\nStreamming interrompido pelo usuário.")
+    print("\nStreamming interrompido pelo usuário.")
     # client.disconnect()
