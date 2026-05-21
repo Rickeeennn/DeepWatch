@@ -39,7 +39,7 @@ variable "public_subnet_cidr" {
 }
 
 variable "allowed_cidr_blocks" {
-  description = "CIDRs com permissão de acesso SSH e Jupyter (restrinja em produção!)"
+  description = "CIDRs com permissão de acesso SSH, Jupyter e Grafana (restrinja em produção!)"
   type        = list(string)
   default     = ["0.0.0.0/0"]
 }
@@ -54,11 +54,11 @@ variable "ec2_ami" {
 variable "ec2_instance_type" {
   description = "Tipo da instância EC2"
   type        = string
-  default     = "t3.large" # 2 vCPU / 8 GB – mínimo confortável para PySpark
+  default     = "t3.large" # 2 vCPU / 8 GB
 
   validation {
     condition     = can(regex("^(t3|t3a|m5|m6i|r5)\\.", var.ec2_instance_type))
-    error_message = "Use instâncias t3, t3a, m5, m6i ou r5 para carga PySpark."
+    error_message = "Use instâncias t3, t3a, m5, m6i ou r5."
   }
 }
 
@@ -75,9 +75,22 @@ variable "key_pair_name" {
 
 # ── S3 ──────────────────────────────────────────────────────
 variable "s3_force_destroy" {
-  description = "Permite destruir buckets não-vazios (útil em dev; desabilite em prod)"
+  description = "Permite destruir buckets não-vazios (útil em dev)"
   type        = bool
   default     = true
+}
+
+# ── Lambda ──────────────────────────────────────────────────
+variable "pandas_lambda_layer_arn" {
+  description = <<EOT
+ARN da Lambda Layer com pandas e numpy.
+Use a layer pública AWSSDKPandas (ex: us-east-1):
+  arn:aws:lambda:us-east-1:336392948345:layer:AWSSDKPandas-Python312:16
+Verifique a versão mais recente em:
+  https://aws-sdk-pandas.readthedocs.io/en/stable/layers.html
+EOT
+  type        = string
+  default     = "arn:aws:lambda:us-east-1:336392948345:layer:AWSSDKPandas-Python312:16"
 }
 
 # ── Tags ────────────────────────────────────────────────────
@@ -85,8 +98,8 @@ variable "tags" {
   description = "Tags padrão aplicadas a todos os recursos"
   type        = map(string)
   default = {
-    Project     = "DeepWatch"
-    ManagedBy   = "Terraform"
-    Course      = "CCO"
+    Project   = "DeepWatch"
+    ManagedBy = "Terraform"
+    Course    = "CCO"
   }
 }

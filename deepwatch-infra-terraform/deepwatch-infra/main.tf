@@ -52,19 +52,14 @@ resource "aws_subnet" "public" {
 
 ##########################
 # Route Table
-# (172.16.0.0 / 172.16.1.0 / 172.16.2.0 conforme diagrama)
 ##########################
 resource "aws_route_table" "public" {
   vpc_id = aws_vpc.main.id
 
-  # Rota padrão para a internet via IGW
   route {
     cidr_block = "0.0.0.0/0"
     gateway_id = aws_internet_gateway.main.id
   }
-
-  # Nota: rotas "local" (172.16.x.0) são criadas automaticamente pela AWS
-  # e não podem ser declaradas explicitamente no Terraform.
 
   tags = merge(var.tags, { Name = "${var.project_name}-route-table" })
 }
@@ -76,13 +71,13 @@ resource "aws_route_table_association" "public" {
 
 ##########################
 # Security Group
+# Adicionada porta 3000 para Grafana
 ##########################
 resource "aws_security_group" "ec2_sg" {
   name        = "${var.project_name}-ec2-sg"
-  description = "Security group para EC2 com Jupyter/PySpark"
+  description = "Security group para EC2 com Jupyter/PySpark/Grafana"
   vpc_id      = aws_vpc.main.id
 
-  # Jupyter Notebook
   ingress {
     description = "Jupyter Notebook"
     from_port   = 8888
@@ -91,7 +86,6 @@ resource "aws_security_group" "ec2_sg" {
     cidr_blocks = var.allowed_cidr_blocks
   }
 
-  # SSH
   ingress {
     description = "SSH"
     from_port   = 22
@@ -100,7 +94,6 @@ resource "aws_security_group" "ec2_sg" {
     cidr_blocks = var.allowed_cidr_blocks
   }
 
-  # Spark UI
   ingress {
     description = "Spark Web UI"
     from_port   = 4040
@@ -109,7 +102,14 @@ resource "aws_security_group" "ec2_sg" {
     cidr_blocks = var.allowed_cidr_blocks
   }
 
-  # Tráfego de saída liberado (para S3, pip, etc.)
+  ingress {
+    description = "Grafana"
+    from_port   = 3000
+    to_port     = 3000
+    protocol    = "tcp"
+    cidr_blocks = var.allowed_cidr_blocks
+  }
+
   egress {
     from_port   = 0
     to_port     = 0
@@ -122,7 +122,6 @@ resource "aws_security_group" "ec2_sg" {
 
 ##########################
 # IAM – AWS Academy usa LabRole pré-existente
-# (voclabs não permite criar IAM Roles)
 ##########################
 data "aws_iam_role" "lab_role" {
   name = "LabRole"
@@ -133,7 +132,7 @@ data "aws_iam_instance_profile" "lab_profile" {
 }
 
 ##########################
-# EC2 – Jupyter + PySpark + Matplotlib
+# EC2 – Jupyter + PySpark + Grafana
 ##########################
 resource "aws_instance" "analytics" {
   ami                    = var.ec2_ami
@@ -161,16 +160,13 @@ resource "aws_instance" "analytics" {
 }
 
 ##########################
-# S3 – Camada Stage/Raw (Bronze)
+# S3 – Stage/Raw (Bronze)
 ##########################
 resource "aws_s3_bucket" "stage_raw" {
   bucket        = "${var.project_name}-stage-raw-${var.environment}"
   force_destroy = var.s3_force_destroy
 
-  tags = merge(var.tags, {
-    Name  = "${var.project_name}-stage-raw"
-    Layer = "bronze"
-  })
+  tags = merge(var.tags, { Name = "${var.project_name}-stage-raw", Layer = "bronze" })
 }
 
 resource "aws_s3_bucket_versioning" "stage_raw" {
@@ -181,9 +177,7 @@ resource "aws_s3_bucket_versioning" "stage_raw" {
 resource "aws_s3_bucket_server_side_encryption_configuration" "stage_raw" {
   bucket = aws_s3_bucket.stage_raw.id
   rule {
-    apply_server_side_encryption_by_default {
-      sse_algorithm = "AES256"
-    }
+    apply_server_side_encryption_by_default { sse_algorithm = "AES256" }
   }
 }
 
@@ -196,16 +190,13 @@ resource "aws_s3_bucket_public_access_block" "stage_raw" {
 }
 
 ##########################
-# S3 – Camada Trusted (Silver)
+# S3 – Trusted (Silver)
 ##########################
 resource "aws_s3_bucket" "trusted" {
   bucket        = "${var.project_name}-trusted-${var.environment}"
   force_destroy = var.s3_force_destroy
 
-  tags = merge(var.tags, {
-    Name  = "${var.project_name}-trusted"
-    Layer = "silver"
-  })
+  tags = merge(var.tags, { Name = "${var.project_name}-trusted", Layer = "silver" })
 }
 
 resource "aws_s3_bucket_versioning" "trusted" {
@@ -216,9 +207,7 @@ resource "aws_s3_bucket_versioning" "trusted" {
 resource "aws_s3_bucket_server_side_encryption_configuration" "trusted" {
   bucket = aws_s3_bucket.trusted.id
   rule {
-    apply_server_side_encryption_by_default {
-      sse_algorithm = "AES256"
-    }
+    apply_server_side_encryption_by_default { sse_algorithm = "AES256" }
   }
 }
 
@@ -231,16 +220,13 @@ resource "aws_s3_bucket_public_access_block" "trusted" {
 }
 
 ##########################
-# S3 – Camada Client (Gold)
+# S3 – Client/Refined (Gold)
 ##########################
 resource "aws_s3_bucket" "client" {
   bucket        = "${var.project_name}-client-${var.environment}"
   force_destroy = var.s3_force_destroy
 
-  tags = merge(var.tags, {
-    Name  = "${var.project_name}-client"
-    Layer = "gold"
-  })
+  tags = merge(var.tags, { Name = "${var.project_name}-client", Layer = "gold" })
 }
 
 resource "aws_s3_bucket_versioning" "client" {
@@ -251,9 +237,7 @@ resource "aws_s3_bucket_versioning" "client" {
 resource "aws_s3_bucket_server_side_encryption_configuration" "client" {
   bucket = aws_s3_bucket.client.id
   rule {
-    apply_server_side_encryption_by_default {
-      sse_algorithm = "AES256"
-    }
+    apply_server_side_encryption_by_default { sse_algorithm = "AES256" }
   }
 }
 
@@ -263,4 +247,192 @@ resource "aws_s3_bucket_public_access_block" "client" {
   block_public_policy     = true
   ignore_public_acls      = true
   restrict_public_buckets = true
+}
+
+##########################
+# S3 – Athena Query Results
+##########################
+resource "aws_s3_bucket" "athena_results" {
+  bucket        = "${var.project_name}-athena-results-${var.environment}"
+  force_destroy = var.s3_force_destroy
+
+  tags = merge(var.tags, { Name = "${var.project_name}-athena-results" })
+}
+
+resource "aws_s3_bucket_server_side_encryption_configuration" "athena_results" {
+  bucket = aws_s3_bucket.athena_results.id
+  rule {
+    apply_server_side_encryption_by_default { sse_algorithm = "AES256" }
+  }
+}
+
+resource "aws_s3_bucket_public_access_block" "athena_results" {
+  bucket                  = aws_s3_bucket.athena_results.id
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+##########################
+# Lambda – Empacotamento dos ZIPs
+##########################
+
+# ETL1: raw → trusted
+data "archive_file" "etl1_zip" {
+  type        = "zip"
+  source_file = "${path.module}/../../Sensor/Cloud/etl_raw_to_trusted_lambda.py"
+  output_path = "${path.module}/lambda_packages/etl1.zip"
+}
+
+# ETL2: trusted → refined
+data "archive_file" "etl2_zip" {
+  type        = "zip"
+  source_file = "${path.module}/../../Sensor/Cloud/etl_trusted_to_refined_lambda.py"
+  output_path = "${path.module}/lambda_packages/etl2.zip"
+}
+
+##########################
+# Lambda – ETL1: Raw → Trusted
+##########################
+resource "aws_lambda_function" "etl1" {
+  function_name    = "${var.project_name}-etl1-raw-to-trusted"
+  role             = data.aws_iam_role.lab_role.arn
+  handler          = "etl_raw_to_trusted_lambda.lambda_handler"
+  runtime          = "python3.12"
+  filename         = data.archive_file.etl1_zip.output_path
+  source_code_hash = data.archive_file.etl1_zip.output_base64sha256
+  timeout          = 300   # 5 minutos — suficiente para processar vários tanques
+  memory_size      = 512   # pandas precisa de memória razoável
+
+  environment {
+    variables = {
+      RAW_BUCKET     = aws_s3_bucket.stage_raw.bucket
+      TRUSTED_BUCKET = aws_s3_bucket.trusted.bucket
+    }
+  }
+
+  layers = [var.pandas_lambda_layer_arn]
+
+  tags = merge(var.tags, { Name = "${var.project_name}-etl1" })
+}
+
+##########################
+# Lambda – ETL2: Trusted → Refined
+##########################
+resource "aws_lambda_function" "etl2" {
+  function_name    = "${var.project_name}-etl2-trusted-to-refined"
+  role             = data.aws_iam_role.lab_role.arn
+  handler          = "etl_trusted_to_refined_lambda.lambda_handler"
+  runtime          = "python3.12"
+  filename         = data.archive_file.etl2_zip.output_path
+  source_code_hash = data.archive_file.etl2_zip.output_base64sha256
+  timeout          = 300
+  memory_size      = 512
+
+  environment {
+    variables = {
+      TRUSTED_BUCKET = aws_s3_bucket.trusted.bucket
+      REFINED_BUCKET = aws_s3_bucket.client.bucket
+    }
+  }
+
+  layers = [var.pandas_lambda_layer_arn]
+
+  tags = merge(var.tags, { Name = "${var.project_name}-etl2" })
+}
+
+##########################
+# Glue – Database
+##########################
+resource "aws_glue_catalog_database" "deepwatch" {
+  name        = "${var.project_name}_${var.environment}"
+  description = "Catálogo de dados DeepWatch — camadas Trusted e Refined"
+}
+
+##########################
+# Glue – Crawler: Trusted
+##########################
+resource "aws_glue_crawler" "trusted" {
+  name          = "${var.project_name}-crawler-trusted"
+  role          = data.aws_iam_role.lab_role.arn
+  database_name = aws_glue_catalog_database.deepwatch.name
+  description   = "Cataloga os CSVs da camada Trusted (schema wide por tanque)"
+
+  s3_target {
+    path = "s3://${aws_s3_bucket.trusted.bucket}/"
+  }
+
+  configuration = jsonencode({
+    Version = 1.0
+    CrawlerOutput = {
+      Partitions = { AddOrUpdateBehavior = "InheritFromTable" }
+      Tables     = { AddOrUpdateBehavior = "MergeNewColumns" }
+    }
+    Grouping = {
+      TableGroupingPolicy = "CombineCompatibleSchemas"
+    }
+  })
+
+  schema_change_policy {
+    update_behavior = "UPDATE_IN_DATABASE"
+    delete_behavior = "LOG"
+  }
+
+  tags = var.tags
+}
+
+##########################
+# Glue – Crawler: Refined
+##########################
+resource "aws_glue_crawler" "refined" {
+  name          = "${var.project_name}-crawler-refined"
+  role          = data.aws_iam_role.lab_role.arn
+  database_name = aws_glue_catalog_database.deepwatch.name
+  description   = "Cataloga os CSVs da camada Refined (particionado por platform_id/tank_id)"
+
+  s3_target {
+    path = "s3://${aws_s3_bucket.client.bucket}/"
+  }
+
+  configuration = jsonencode({
+    Version = 1.0
+    CrawlerOutput = {
+      Partitions = { AddOrUpdateBehavior = "InheritFromTable" }
+      Tables     = { AddOrUpdateBehavior = "MergeNewColumns" }
+    }
+    Grouping = {
+      TableGroupingPolicy = "CombineCompatibleSchemas"
+    }
+  })
+
+  schema_change_policy {
+    update_behavior = "UPDATE_IN_DATABASE"
+    delete_behavior = "LOG"
+  }
+
+  tags = var.tags
+}
+
+##########################
+# Athena – Workgroup
+##########################
+resource "aws_athena_workgroup" "deepwatch" {
+  name        = "${var.project_name}-${var.environment}"
+  description = "Workgroup DeepWatch — consultas no Data Lake"
+
+  configuration {
+    enforce_workgroup_configuration    = true
+    publish_cloudwatch_metrics_enabled = false
+
+    result_configuration {
+      output_location = "s3://${aws_s3_bucket.athena_results.bucket}/query-results/"
+
+      encryption_configuration {
+        encryption_option = "SSE_S3"
+      }
+    }
+  }
+
+  tags = var.tags
 }
