@@ -1,6 +1,51 @@
+# ─── SSH & Certificados ───────────────────────────────────────────────────────
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.cer
+
+# ─── Terraform ────────────────────────────────────────────────────────────────
 .terraform/
 .terraform.lock.hcl
 *.tfstate
 *.tfstate.backup
 *.tfvars
+!*.tfvars.example
 terraform.tfplan
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# ─── Python ───────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+env/
+ENV/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+
+# ─── Jupyter ──────────────────────────────────────────────────────────────────
+.ipynb_checkpoints/
+
+# ─── Variáveis de Ambiente & Segredos ─────────────────────────────────────────
+.env
+.env.*
+!.env.example
+*.secret
+secrets.json
+credentials.json
+iothub_connection_string.txt
+
+# ─── OS ───────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
