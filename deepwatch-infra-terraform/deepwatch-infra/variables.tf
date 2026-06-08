@@ -11,7 +11,7 @@ variable "aws_region" {
 variable "project_name" {
   description = "Nome do projeto (usado como prefixo nos recursos)"
   type        = string
-  default     = "deepwatch"
+  default     = "deepwatch-sptech" 
 }
 
 variable "environment" {

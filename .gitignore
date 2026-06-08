@@ -49,3 +49,9 @@ iothub_connection_string.txt
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# ─── POC – Outputs locais ─────────────────────────────────────────────────────
+POC/teste_local/saidas/
+POC/teste_local/dados/
+*.log
+monitor_report_*.json
