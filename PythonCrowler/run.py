@@ -4,8 +4,9 @@ Oil Spill Offshore News Monitor
 Script principal — executa crawler, análise léxica e gera dashboard.
 
 Uso:
-    python run.py               # roda tudo
-    python run.py --only-dash   # só regenera o dashboard (usa dados existentes)
+    python -m pip install -r requirements.txt    # adiciona todas as dependencias
+    python run.py                                # roda tudo
+    python run.py --only-dash                    # só regenera o dashboard (usa dados existentes)
 """
 
 import os
